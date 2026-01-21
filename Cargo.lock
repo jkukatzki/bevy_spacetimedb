@@ -735,6 +735,7 @@ dependencies = [
  "bevy",
  "bevy_spacetimedb_macros 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spacetimedb-sdk",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -1676,6 +1677,68 @@ dependencies = [
  "libm",
  "rand",
  "serde_core",
+]
+
+[[package]]
+name = "gloo-console"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a17868f56b4a24f677b17c8cb69958385102fa879418052d60b50bc1727e261"
+dependencies = [
+ "gloo-utils",
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-net"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c06f627b1a58ca3d42b45d6104bf1e1a03799df472df00988b6ba21accc10580"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-sink",
+ "gloo-utils",
+ "http",
+ "js-sys",
+ "pin-project",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-storage"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbc8031e8c92758af912f9bc08fbbadd3c6f3cfcbf6b64cdf3d6a81f0139277a"
+dependencies = [
+ "gloo-utils",
+ "js-sys",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-utils"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5555354113b18c547c1d3a98fbf7fb32a9ff4f6fa112ce823a21641a0ba3aa"
+dependencies = [
+ "js-sys",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2928,9 +2991,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-bindings-macro"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4deb0b154961123ff3459437e4167b4210bd4e4255071ce4e0053ef0c636502"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "heck 0.4.1",
  "humantime",
@@ -2942,9 +3004,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-client-api-messages"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1106075c1b7b5617927d77a317713b5275767d79b74c5be014c1bb8fa5e1048"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "bytes",
  "bytestring",
@@ -2964,9 +3025,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-data-structures"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cbccfc5b7cb4dbdde98b9683046999ba3e5b9f37b273ecc0d77dd9fd2cea42b"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "ahash",
  "crossbeam-queue",
@@ -2978,9 +3038,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-lib"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fca841a1533afd647d2a2319ea377ba372d490f95bedad79d473a5eb1e521c93"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -3001,9 +3060,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-metrics"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb0b8e202f65035a7aae9d049335dbdc98fa27582d3d73614de6da96222dd0f"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "arrayvec",
  "itertools 0.12.1",
@@ -3013,9 +3071,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-primitives"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "052a89c7fb459a9c8bdd1ec2744079b89e86c0626a2a70ea346afd74a40926c0"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "bitflags",
  "either",
@@ -3026,9 +3083,8 @@ dependencies = [
 
 [[package]]
 name = "spacetimedb-sats"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5cae97b2b58ec2bf606c8546b6d6b008b1a3412a57437694a3f9723c5ebb960"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -3043,6 +3099,7 @@ dependencies = [
  "ethnum",
  "hex",
  "itertools 0.12.1",
+ "rand",
  "second-stack",
  "serde",
  "sha3",
@@ -3051,13 +3108,13 @@ dependencies = [
  "spacetimedb-metrics",
  "spacetimedb-primitives",
  "thiserror 1.0.69",
+ "uuid",
 ]
 
 [[package]]
 name = "spacetimedb-sdk"
-version = "1.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45d0a9a2096b6a2b67a787cd6d3d08087dc3cb4f4dab59a39f58298021bcd829"
+version = "1.11.3"
+source = "git+https://github.com/kistz/SpacetimeDB.git?branch=rust-web-sdk-updated#0aff3163b60ab07cd2cb2216b983c8dc4a395d47"
 dependencies = [
  "anymap",
  "base64 0.21.7",
@@ -3066,8 +3123,14 @@ dependencies = [
  "flate2",
  "futures",
  "futures-channel",
+ "getrandom",
+ "gloo-console",
+ "gloo-net",
+ "gloo-storage",
+ "gloo-utils",
  "home",
  "http",
+ "js-sys",
  "log",
  "once_cell",
  "prometheus",
@@ -3079,7 +3142,11 @@ dependencies = [
  "spacetimedb-sats",
  "thiserror 1.0.69",
  "tokio",
- "tokio-tungstenite",
+ "tokio-tungstenite 0.27.0",
+ "tokio-tungstenite-wasm",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -3320,6 +3387,18 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a9daff607c6d2bf6c16fd681ccb7eecc83e4e2cdc1ca067ffaadfca5de7f084"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite 0.26.2",
+]
+
+[[package]]
+name = "tokio-tungstenite"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "489a59b6730eda1b0171fcfda8b121f4bee2b35cba8645ca35c5f7ba3eb736c1"
@@ -3329,7 +3408,26 @@ dependencies = [
  "native-tls",
  "tokio",
  "tokio-native-tls",
- "tungstenite",
+ "tungstenite 0.27.0",
+]
+
+[[package]]
+name = "tokio-tungstenite-wasm"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4585aa997e4afb43c64f9101c27411b8e1bf9dde49b22e3e47acdde3055b325c"
+dependencies = [
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "http",
+ "httparse",
+ "js-sys",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-tungstenite 0.26.2",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -3444,6 +3542,23 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4793cb5e56680ecbb1d843515b23b6de9a75eb04b66643e256a396d43be33c13"
+dependencies = [
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand",
+ "sha1",
+ "thiserror 2.0.17",
+ "utf-8",
 ]
 
 [[package]]
