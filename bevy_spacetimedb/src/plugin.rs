@@ -187,7 +187,7 @@ pub fn connect_with_token<
             .build()
             .expect("Failed to build delayed connection");
 
-            let conn = Box::<C>::leak(Box::new(conn));
+        let conn = Box::<C>::leak(Box::new(conn));
 
         // NOW register tables and reducers with the actual connection!
         // Create a temporary plugin with the stored message senders
@@ -202,6 +202,7 @@ pub fn connect_with_token<
             message_senders: Arc::clone(&plugin_data.message_senders),
             table_registers: Arc::new(Mutex::new(Vec::new())),
             reducer_registers: Arc::new(Mutex::new(Vec::new())),
+            procedure_registers: Arc::new(Mutex::new(Vec::new())),
         };
         
         // Register tables with the real connection
