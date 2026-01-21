@@ -9,6 +9,9 @@ use bevy::{
 };
 use std::marker::PhantomData;
 use spacetimedb_sdk::{Compression, DbConnectionBuilder, DbContext};
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::spawn_local;
 use std::{
     any::{Any, TypeId},
     sync::{Arc, Mutex, mpsc::{channel, Sender}},
@@ -68,71 +71,155 @@ pub fn connect_with_token<
     let plugin_data = world.remove_non_send_resource::<DelayedPluginData<C, M>>()
         .expect("DelayedPluginData not found");
     
-    let send_connected = config.send_connected.clone();
-    let send_disconnected = config.send_disconnected.clone();
-    let send_connect_error = config.send_connect_error.clone();
-    
-    let conn = DbConnectionBuilder::<M>::new()
-        .with_module_name(config.module_name)
-        .with_uri(config.uri)
-        .with_token(token)
-        .with_compression(config.compression)
-        .with_light_mode(config.light_mode)
-        .on_connect_error(move |_ctx, err| {
-            send_connect_error
-                .send(StdbConnectionErrorMessage { err })
-                .unwrap();
-        })
-        .on_disconnect(move |_ctx, err| {
-            send_disconnected
-                .send(StdbDisconnectedMessage { err })
-                .unwrap();
-        })
-        .on_connect(move |_ctx, id, token| {
-            send_connected
-                .send(StdbConnectedMessage {
-                    identity: id,
-                    access_token: token.to_string(),
+    #[cfg(target_arch = "wasm32")]
+    {
+        // On wasm, spawn async connection task
+        let world_ptr = world as *mut bevy::prelude::World;
+        
+        spawn_local(async move {
+            let send_connected = config.send_connected.clone();
+            let send_disconnected = config.send_disconnected.clone();
+            let send_connect_error = config.send_connect_error.clone();
+            
+            let conn = DbConnectionBuilder::<M>::new()
+                .with_module_name(config.module_name)
+                .with_uri(config.uri)
+                .with_token(token)
+                .with_compression(config.compression)
+                .with_light_mode(config.light_mode)
+                .on_connect_error(move |_ctx, err| {
+                    send_connect_error
+                        .send(StdbConnectionErrorMessage { err })
+                        .unwrap();
                 })
-                .unwrap();
-        })
-        .build()
-        .expect("Failed to build delayed connection");
+                .on_disconnect(move |_ctx, err| {
+                    send_disconnected
+                        .send(StdbDisconnectedMessage { err })
+                        .unwrap();
+                })
+                .on_connect(move |_ctx, id, token| {
+                    send_connected
+                        .send(StdbConnectedMessage {
+                            identity: id,
+                            access_token: token.to_string(),
+                        })
+                        .unwrap();
+                })
+                .build()
+                .await
+                .expect("Failed to build delayed connection");
 
-    let conn = Box::<C>::leak(Box::new(conn));
+            let conn = Box::<C>::leak(Box::new(conn));
+            
+            // SAFETY: We're accessing world pointer from async context
+            // This is safe because we control when connect_with_token is called
+            let world = unsafe { &mut *world_ptr };
 
-    // NOW register tables and reducers with the actual connection!
-    // Create a temporary plugin with the stored message senders
-    let temp_plugin = StdbPlugin::<C, M> {
-        module_name: None,
-        uri: None,
-        token: None,
-        run_fn: None,
-        compression: None,
-        light_mode: false,
-        delayed_connect: false,
-        message_senders: Arc::clone(&plugin_data.message_senders),
-        table_registers: Arc::new(Mutex::new(Vec::new())),
-        reducer_registers: Arc::new(Mutex::new(Vec::new())),
-        procedure_registers: Arc::new(Mutex::new(Vec::new())),
-    };
-    
-    // Register tables with the real connection
-    let table_regs = plugin_data.table_registers.lock().unwrap();
-    for table_register in table_regs.iter() {
-        table_register(&temp_plugin, unsafe { &mut *(world as *mut _ as *mut App) }, conn.db());
+            // Create a temporary plugin with the stored message senders
+            let temp_plugin = StdbPlugin::<C, M> {
+                module_name: None,
+                uri: None,
+                token: None,
+                run_fn: None,
+                compression: None,
+                light_mode: false,
+                delayed_connect: false,
+                message_senders: Arc::clone(&plugin_data.message_senders),
+                table_registers: Arc::new(Mutex::new(Vec::new())),
+                reducer_registers: Arc::new(Mutex::new(Vec::new())),
+            };
+            
+            // Register tables with the real connection
+            let table_regs = plugin_data.table_registers.lock().unwrap();
+            for table_register in table_regs.iter() {
+                table_register(&temp_plugin, unsafe { &mut *(world as *mut _ as *mut App) }, conn.db());
+            }
+            drop(table_regs);
+            
+            // Register reducers
+            let reducer_regs = plugin_data.reducer_registers.lock().unwrap();
+            for reducer_register in reducer_regs.iter() {
+                reducer_register(unsafe { &mut *(world as *mut _ as *mut App) }, conn.reducers());
+            }
+            drop(reducer_regs);
+
+            world.insert_resource(StdbConnection::new(conn));
+            
+            // Call run_fn to start processing messages
+            // On wasm, run_threaded uses spawn_local internally
+            (config.run_fn)(conn);
+        });
+        
+        return;
     }
-    drop(table_regs);
     
-    // Register reducers
-    let reducer_regs = plugin_data.reducer_registers.lock().unwrap();
-    for reducer_register in reducer_regs.iter() {
-        reducer_register(unsafe { &mut *(world as *mut _ as *mut App) }, conn.reducers());
-    }
-    drop(reducer_regs);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let send_connected = config.send_connected.clone();
+        let send_disconnected = config.send_disconnected.clone();
+        let send_connect_error = config.send_connect_error.clone();
+        
+        let conn = DbConnectionBuilder::<M>::new()
+            .with_module_name(config.module_name)
+            .with_uri(config.uri)
+            .with_token(token)
+            .with_compression(config.compression)
+            .with_light_mode(config.light_mode)
+            .on_connect_error(move |_ctx, err| {
+                send_connect_error
+                    .send(StdbConnectionErrorMessage { err })
+                    .unwrap();
+            })
+            .on_disconnect(move |_ctx, err| {
+                send_disconnected
+                    .send(StdbDisconnectedMessage { err })
+                    .unwrap();
+            })
+            .on_connect(move |_ctx, id, token| {
+                send_connected
+                    .send(StdbConnectedMessage {
+                        identity: id,
+                        access_token: token.to_string(),
+                    })
+                    .unwrap();
+            })
+            .build()
+            .expect("Failed to build delayed connection");
 
-    (config.run_fn)(conn);
-    world.insert_resource(StdbConnection::new(conn));
+            let conn = Box::<C>::leak(Box::new(conn));
+
+        // NOW register tables and reducers with the actual connection!
+        // Create a temporary plugin with the stored message senders
+        let temp_plugin = StdbPlugin::<C, M> {
+            module_name: None,
+            uri: None,
+            token: None,
+            run_fn: None,
+            compression: None,
+            light_mode: false,
+            delayed_connect: false,
+            message_senders: Arc::clone(&plugin_data.message_senders),
+            table_registers: Arc::new(Mutex::new(Vec::new())),
+            reducer_registers: Arc::new(Mutex::new(Vec::new())),
+        };
+        
+        // Register tables with the real connection
+        let table_regs = plugin_data.table_registers.lock().unwrap();
+        for table_register in table_regs.iter() {
+            table_register(&temp_plugin, unsafe { &mut *(world as *mut _ as *mut App) }, conn.db());
+        }
+        drop(table_regs);
+        
+        // Register reducers
+        let reducer_regs = plugin_data.reducer_registers.lock().unwrap();
+        for reducer_register in reducer_regs.iter() {
+            reducer_register(unsafe { &mut *(world as *mut _ as *mut App) }, conn.reducers());
+        }
+        drop(reducer_regs);
+
+        (config.run_fn)(conn);
+        world.insert_resource(StdbConnection::new(conn));
+    }
 }
 
 /// The plugin for connecting SpacetimeDB with your bevy application.
@@ -157,9 +244,6 @@ pub struct StdbPlugin<
     #[allow(clippy::type_complexity)]
     pub(crate) reducer_registers:
         Arc<Mutex<Vec<Box<dyn Fn(&mut App, &<C as DbContext>::Reducers) + Send + Sync>>>>,
-    #[allow(clippy::type_complexity)]
-    pub(crate) procedure_registers:
-        Arc<Mutex<Vec<Box<dyn Fn(&mut App, &<C as DbContext>::Procedures) + Send + Sync>>>>,
 }
 
 impl<
@@ -180,7 +264,6 @@ impl<
             message_senders: Arc::new(Mutex::default()),
             table_registers: Arc::new(Mutex::new(Vec::default())),
             reducer_registers: Arc::new(Mutex::new(Vec::default())),
-            procedure_registers: Arc::new(Mutex::new(Vec::default())),
         }
     }
 }
@@ -280,8 +363,14 @@ impl<
             .add_message_channel::<StdbConnectedMessage>(recv_connected)
             .add_message_channel::<StdbDisconnectedMessage>(recv_disconnected);
 
+        // On wasm, always use delayed connect since build() is async
+        #[cfg(target_arch = "wasm32")]
+        let delayed_connect = true;
+        #[cfg(not(target_arch = "wasm32"))]
+        let delayed_connect = self.delayed_connect;
+
         // NEW: Check if we should delay the connection
-        if self.delayed_connect {
+        if delayed_connect {
             // Store configuration AND table/reducer registrations for later connection
             app.insert_resource(StdbPluginConfig::<C, M> {
                 module_name: self.module_name.clone().unwrap(),
@@ -307,6 +396,7 @@ impl<
         }
 
         // FIXME App should not crash if intial connection fails.
+        #[cfg(not(target_arch = "wasm32"))]
         let conn = DbConnectionBuilder::<M>::new()
             .with_module_name(self.module_name.clone().unwrap())
             .with_uri(self.uri.clone().unwrap())
@@ -334,27 +424,30 @@ impl<
             .build()
             .expect("Failed to build connection");
 
-        // A 'static ref is needed for the connection the register tables and reducers
-        // This is fine because only a small and fixed amount of memory will be leaked
-        // Because conn has to live until the end of the program anyways, not using it would not make for any performance improvements.
-        let conn = Box::<C>::leak(Box::new(conn));
-
+        #[cfg(not(target_arch = "wasm32"))]
         {
-            let table_regs = self.table_registers.lock().unwrap();
-            for table_register in table_regs.iter() {
-                table_register(self, app, conn.db());
-            }
-        }
-        {
-            let reducer_regs = self.reducer_registers.lock().unwrap();
-            for reducer_register in reducer_regs.iter() {
-                reducer_register(app, conn.reducers());
-            }
-        }
+            // A 'static ref is needed for the connection the register tables and reducers
+            // This is fine because only a small and fixed amount of memory will be leaked
+            // Because conn has to live until the end of the program anyways, not using it would not make for any performance improvements.
+            let conn = Box::<C>::leak(Box::new(conn));
 
-        let run_fn = self.run_fn.expect("No run function specified!");
-        run_fn(conn);
+            {
+                let table_regs = self.table_registers.lock().unwrap();
+                for table_register in table_regs.iter() {
+                    table_register(self, app, conn.db());
+                }
+            }
+            {
+                let reducer_regs = self.reducer_registers.lock().unwrap();
+                for reducer_register in reducer_regs.iter() {
+                    reducer_register(app, conn.reducers());
+                }
+            }
 
-        app.insert_resource(StdbConnection::new(conn));
+            let run_fn = self.run_fn.expect("No run function specified!");
+            run_fn(conn);
+
+            app.insert_resource(StdbConnection::new(conn));
+        }
     }
 }
